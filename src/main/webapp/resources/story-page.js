@@ -5,6 +5,26 @@ function initialize() {
     var ctx = canvas.getContext("2d");
     var img = document.getElementById("background_img");
     ctx.drawImage(img, 0, 0);
+
+    socket = new WebSocket("ws://localhost:8080/StickerStory/story/notifications");
+    socket.onmessage = onSocketMessage;
+}
+
+function onSocketMessage(event) {
+    var data = event.data;
+    if (data) {
+        var receivedSticker = JSON.parse(data);
+        log("Received Object: " + data);
+        if (receivedSticker.action === "add") {
+            var imageObj = new Image();
+            imageObj.onload = function () {
+                var canvas = document.getElementById("board");
+                var context = canvas.getContext("2d");
+                context.drawImage(imageObj, receivedSticker.x, receivedSticker.y);
+            };
+            imageObj.src = "resources/stickers/" + receivedSticker.sticker;
+        }
+    }
 }
 
 // Drag and drop functionality
@@ -30,7 +50,10 @@ function drop(ev) {
         y: ev.clientY - draggedSticker.offsetY - bounds.top,
         sticker: draggedSticker.sticker
     };
-    log("Sending Object " + JSON.stringify(stickerToSend));
+    
+    var stickerJson = JSON.stringify(stickerToSend);
+    socket.send(stickerJson);
+    log("Sending Object " + stickerJson);
 }
 
 function allowDrop(ev) {
